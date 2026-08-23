@@ -1,0 +1,6 @@
+.db
+.venv
+./venv
+.exe
+_pycache_
+.vscode
