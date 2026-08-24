@@ -18,18 +18,20 @@ def get_db():
 class UserCreate(BaseModel):
     name: str
 
-@app.get("/users/{user_id}")
+class UserOut(BaseModel):
+    id: int
+    name: str
+
+@app.get("/users/{user_id}", response_model=UserOut)
 def get_user(user_id:int, db: Session = Depends(get_db) )->dict:
     user = db.get(User,user_id)
     if user is None:
         raise HTTPException(status_code=404, detail='User Not found')
     else:
-        return {'user_name' : user.name,
-                'user_id' : user.id
-                }
+        return user
 
 @app.post("/users")
-def create_user(user: UserCreate, db: Session = Depends(get_db))->dict:
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
     new_user = User(
         name = user.name,
     )
