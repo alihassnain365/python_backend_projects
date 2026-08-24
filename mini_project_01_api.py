@@ -8,6 +8,8 @@ from pydantic import BaseModel
 """
 1. Could add the User, and Post
 2. Could get the User, and Posts of the user
+3. Could create a post
+4. Could get a post
 """
 
 app = FastAPI()
@@ -29,6 +31,20 @@ class UserOut(BaseModel):
 class UserCreate(BaseModel):
     """Creation schema of the user"""
     name: str
+
+class PostCreate(BaseModel):
+    """Creation schema of the Post"""
+    title: str
+    user_id: int
+
+class PostOut(BaseModel):
+    """Return schema of the post"""
+    id: int
+    title: str
+    user_id: int
+
+
+
 
 
 
@@ -54,6 +70,22 @@ def create_user(user:UserCreate, db:Session= Depends(get_db)):
         'statur': "User is entered successfully"
     }
 
+@app.post("/users/create_post")
+def create_post(post:PostCreate, db: Session = Depends(get_db)):
+    new_post = Post(
+        title = post.title,
+        user_id = post.user_id
+    )
+    db.add(new_post)
+    db.commit()
+    return {
+        'status': "Post is added successfully"
+    }
+
+@app.get("/users/get_post/{post_id}", response_model=PostOut)
+def get_post(post_id:int, db:Session = Depends(get_db)):
+    result_post = db.get(Post,post_id)
+    return result_post
 
 
 
