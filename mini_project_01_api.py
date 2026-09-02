@@ -1,5 +1,6 @@
 from database import sessionLocal
 from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select
 from models import User, Post
 from fastapi import FastAPI, Depends, HTTPException
@@ -77,7 +78,11 @@ def create_post(post:PostCreate, db: Session = Depends(get_db)):
         user_id = post.user_id
     )
     db.add(new_post)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Invalid user_id")
     return {
         'status': "Post is added successfully"
     }
@@ -85,7 +90,10 @@ def create_post(post:PostCreate, db: Session = Depends(get_db)):
 @app.get("/users/get_post/{post_id}", response_model=PostOut)
 def get_post(post_id:int, db:Session = Depends(get_db)):
     result_post = db.get(Post,post_id)
-    return result_post
+    if result_post is None:
+        raise HTTPException(status_code=404, detail="Post doesn't exist.")
+    else:
+        return result_post
 
 
 
