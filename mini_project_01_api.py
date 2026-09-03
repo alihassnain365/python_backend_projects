@@ -57,6 +57,23 @@ class PostPut(BaseModel):
 
 
 
+"""Pagination + endpoints by limit and filtering"""
+@app.get("/users/get_posts", response_model=list[PostOut])
+def get_posts(user_id:int|None = None, limit:int|None = 10, offset:int|None = 0, db:Session=Depends(get_db)):
+    query = select(Post)
+    if user_id is not None:
+        check_user = db.get(User,user_id)
+        if check_user is None:
+            raise HTTPException(status_code=404, detail="Invalid user id")    
+        else:
+            query=query.where(Post.user_id == user_id)
+    if limit is not None:
+        query = query.limit(limit)
+    if offset is not None:
+        query = query.offset(offset)
+    result = db.execute(query).scalars().all()
+    return result
+
 @app.get("/users/{user_id}", response_model=UserOut)
 def get_user(user_id:int, db: Session= Depends(get_db)):
     user = db.get(User,user_id)
@@ -109,6 +126,19 @@ def update_post(post_id:int, post:PostPut, db:Session= Depends(get_db)):
         targeted_post.title = post.title
     db.commit()
     return targeted_post
+
+@app.delete("/users/delete_post/{post_id}", status_code=204)
+def delete_post(post_id:int, db:Session=Depends(get_db)):
+    target = db.get(Post,post_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail="Post with this id does not exist.")
+    db.delete(target)
+    db.commit()
+
+
+
+    
+    
 
 
 
