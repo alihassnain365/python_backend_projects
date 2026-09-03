@@ -44,6 +44,11 @@ class PostOut(BaseModel):
     title: str
     user_id: int
 
+class PostPut(BaseModel):
+    """Schema for post update"""
+    title: str | None = None
+
+
 
 
 
@@ -94,6 +99,17 @@ def get_post(post_id:int, db:Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Post doesn't exist.")
     else:
         return result_post
+
+@app.put("/users/update_post/{post_id}", response_model=PostOut)
+def update_post(post_id:int, post:PostPut, db:Session= Depends(get_db)):
+    targeted_post = db.get(Post, post_id)
+    if targeted_post is None:
+        raise HTTPException(status_code=404, detail="Id does not exist")
+    if post.title is not None:
+        targeted_post.title = post.title
+    db.commit()
+    return targeted_post
+
 
 
 
