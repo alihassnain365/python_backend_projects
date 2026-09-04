@@ -14,6 +14,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str]
     posts: Mapped[list["Post"]] = relationship(back_populates='user')
+    hashed_password: Mapped[str | None]
 
     def __repr__(self):
         return f"User({self.id}, {self.name})"
