@@ -58,3 +58,5 @@ post_tag = Table(
 
 # ---- Now creating tables from the above defined struture
 Base.metadata.create_all(engine)
+
+
