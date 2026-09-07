@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from models import User
 from pydantic import BaseModel
 import bcrypt
+from sqlalchemy import select
 
 
 app = FastAPI()
@@ -56,3 +57,15 @@ def user_signup(user:UserSignUp, db:Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     return new_user
+
+@app.post("/login/", response_model=UserOut)
+def user_login(login:UserSignUp, db:Session = Depends(get_db)):
+    user = db.execute(select(User).where(User.name == login.user_name)).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    if user.hashed_password is None:
+        raise HTTPException(status_code=401, detail="Invalid credential")
+    if not (bcrypt.checkpw(login.password.encode('utf-8'), user.hashed_password.encode('utf-8'))):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    else:
+        return user
