@@ -5,7 +5,11 @@ from models import User
 from pydantic import BaseModel
 import bcrypt
 from sqlalchemy import select
+import jwt
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
 app = FastAPI()
 
@@ -27,6 +31,10 @@ class UserOut(BaseModel):
 class UserSignUp(BaseModel):
     user_name: str
     password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 
 @app.get("/users/{user_id}", response_model=UserOut)
@@ -58,7 +66,7 @@ def user_signup(user:UserSignUp, db:Session = Depends(get_db)):
     db.commit()
     return new_user
 
-@app.post("/login/", response_model=UserOut)
+@app.post("/login/", response_model=Token)
 def user_login(login:UserSignUp, db:Session = Depends(get_db)):
     user = db.execute(select(User).where(User.name == login.user_name)).scalar_one_or_none()
     if user is None:
@@ -68,4 +76,7 @@ def user_login(login:UserSignUp, db:Session = Depends(get_db)):
     if not (bcrypt.checkpw(login.password.encode('utf-8'), user.hashed_password.encode('utf-8'))):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     else:
-        return user
+        payload = {"id":user.id,
+                   "name":user.name}
+        token = jwt.encode(payload,os.getenv("jwt_secret_key"), algorithm="HS256")
+        return {"access_token":token, "token_type": "bearer"}
