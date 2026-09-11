@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import HTTPBearer
 from database import sessionLocal
 from sqlalchemy.orm import Session
 from models import User
@@ -12,6 +13,17 @@ import os
 load_dotenv()
 
 app = FastAPI()
+security = HTTPBearer() # creating the reusable (callable) instance of httpBearer class
+
+def verify_token(credentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token,os.getenv("jwt_secret_key"), algorithms=["HS256"])
+        return payload
+    except jwt.InvalidTokenError as te:
+        print(f"Following error has happened {te}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
 
 def get_db():
     db = sessionLocal()
@@ -38,7 +50,7 @@ class Token(BaseModel):
 
 
 @app.get("/users/{user_id}", response_model=UserOut)
-def get_user(user_id:int, db: Session = Depends(get_db) )->dict:
+def get_user(user_id:int, db: Session = Depends(get_db), current_user:dict = Depends(verify_token))->dict:
     user = db.get(User,user_id)
     if user is None:
         raise HTTPException(status_code=404, detail='User Not found')
