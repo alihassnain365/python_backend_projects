@@ -5,6 +5,10 @@ from sqlalchemy import select
 from models import User, Post
 from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
+from fastapi.security import HTTPBearer
+import jwt
+import os
+from dotenv import load_dotenv
 
 """
 1. Could add the User, and Post
@@ -14,6 +18,9 @@ from pydantic import BaseModel
 """
 
 app = FastAPI()
+security = HTTPBearer() 
+load_dotenv()
+
 
 def get_db():
     db = sessionLocal()
@@ -21,6 +28,18 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def verify_token(credentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token.encode('utf-8'),os.getenv("jwt_secret_key"), algorithms=["HS256"])
+        return payload
+    except jwt.InvalidTokenError as te:
+        print(f"The following error has happened : {te}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+        
 
 
 # returning schema of the user (only)
@@ -75,7 +94,9 @@ def get_posts(user_id:int|None = None, limit:int|None = 10, offset:int|None = 0,
     return result
 
 @app.get("/users/{user_id}", response_model=UserOut)
-def get_user(user_id:int, db: Session= Depends(get_db)):
+def get_user(user_id:int, db: Session= Depends(get_db), current_user: dict = Depends(verify_token) ):
+    if not current_user["id"] == user_id:
+        raise HTTPException(status_code=403, detail="you can't access it" )
     user = db.get(User,user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not exists")
